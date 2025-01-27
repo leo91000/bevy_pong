@@ -1,0 +1,9 @@
+[package]
+name = "pong"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+avian2d = { version = "0.2.1" }
+bevy = { version = "0.15.1", features = ["dynamic_linking"] }
+leafwing-input-manager = "0.16.0"
