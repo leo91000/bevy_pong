@@ -1,9 +1,49 @@
 [package]
 name = "pong"
 version = "0.1.0"
+publish = false
+authors = ["Léo Coletta <contact@leo-coletta.fr>"]
 edition = "2021"
+exclude = ["dist", "build", "assets", "credits"]
+
+[[bin]]
+name = "pong_server"
+path = "src/entry_server.rs"
+
+[[bin]]
+name = "pong_client"
+path = "src/entry_client.rs"
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev]
+opt-level = 1
+
+# This is used by trunk as it doesn't support custom profiles: https://github.com/trunk-rs/trunk/issues/605
+# xbuild also uses this profile for building android AABs because I couldn't find a configuration for it
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+
+# Profile for distribution
+[profile.dist]
+inherits = "release"
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
 
 [dependencies]
-avian2d = { version = "0.2.1" }
-bevy = { version = "0.15.1", features = ["dynamic_linking"] }
+avian2d = { version = "0.2", features = ["serialize"] }
+bevy = { version = "0.15.1" }
 leafwing-input-manager = "0.16.0"
+lightyear = { version = "0.19.0", features = ["leafwing", "avian2d", "webtransport", "websocket"] }
+serde = { version = "1.0.217", features = ["derive"] }
+
+[features]
+dev = [
+    "bevy/dynamic_linking",
+]
