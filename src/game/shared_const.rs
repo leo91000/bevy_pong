@@ -30,3 +30,5 @@ pub const BORDER_THICKNESS: f32 = 20.;
 pub const BALL_RADIUS: f32 = 10.;
 
 pub const PROTOCOL_ID: u64 = 0;
+
+pub const REPLICATION_GROUP: ReplicationGroup = ReplicationGroup::new_id(1);

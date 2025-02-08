@@ -1,3 +1,4 @@
+use crate::game::shared::Border;
 use crate::game::shared_const::BALL_RADIUS;
 use avian2d::prelude::*;
 use bevy::prelude::*;
@@ -84,6 +85,14 @@ impl Plugin for ProtocolPlugin {
         // Add Leafwing input plugin
         let lightyear_leafwing_plugin = LeafwingInputPlugin::<Action>::default();
         app.add_plugins(lightyear_leafwing_plugin);
+
+        // Game markers
+        app.register_component::<NetworkedBall>(ChannelDirection::ServerToClient)
+            .add_prediction(ComponentSyncMode::Full);
+        app.register_component::<NetworkedPaddle>(ChannelDirection::ServerToClient)
+            .add_prediction(ComponentSyncMode::Full);
+        app.register_component::<Border>(ChannelDirection::ServerToClient)
+            .add_prediction(ComponentSyncMode::Full);
 
         // Fully replicated, but not visual, so no need for lerp/corrections:
         app.register_component::<LinearVelocity>(ChannelDirection::ServerToClient)

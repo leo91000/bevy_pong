@@ -1,14 +1,18 @@
-use crate::game::protocol::{NetworkedBall, NetworkedPaddle, PaddleSide, PlayerId, ProtocolPlugin};
-use crate::game::shared::{Border, BorderSide, GameArea};
+use crate::game::protocol::{
+    Action, NetworkedBall, NetworkedPaddle, PaddleSide, PlayerId, ProtocolPlugin,
+};
+use crate::game::shared::{apply_paddle_action, Border, BorderSide, GameArea};
 use crate::game::shared_const::{
     server_private_key, shared_config, BORDER_THICKNESS, PADDLE_HEIGHT, PADDLE_WIDTH, PROTOCOL_ID,
+    REPLICATION_GROUP,
 };
 use avian2d::prelude::*;
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 use bevy::scene::ScenePlugin;
 use bevy::state::app::StatesPlugin;
-use lightyear::prelude::server::{ControlledBy, Lifetime, ReplicationTarget, ServerCommands};
+use leafwing_input_manager::prelude::*;
+use lightyear::prelude::server::{ControlledBy, ServerCommands};
 use lightyear::prelude::*;
 use lightyear::server::config::ServerConfig;
 use lightyear::server::plugin::ServerPlugins;
@@ -33,7 +37,7 @@ impl Default for PongServerConfig {
 }
 
 #[derive(Default)]
-pub struct ServerPlugin {
+pub struct PongServerPlugin {
     pub config: PongServerConfig,
 }
 
@@ -44,11 +48,11 @@ fn webtransport_net_config(port: u16) -> server::NetConfig {
         ..default()
     };
 
-    let ip: IpAddr = Ipv4Addr::LOCALHOST.into();
-    let socket_addr = SocketAddr::new(ip, port);
+    let ip: IpAddr = Ipv4Addr::UNSPECIFIED.into();
+    let server_addr = SocketAddr::new(ip, port);
 
     let transport_config = server::ServerTransport::WebTransportServer {
-        server_addr: socket_addr,
+        server_addr,
         certificate: server::Identity::self_signed(&["localhost", "127.0.0.1", "::1"]).unwrap(),
     };
 
@@ -60,7 +64,7 @@ fn webtransport_net_config(port: u16) -> server::NetConfig {
     }
 }
 
-impl Plugin for ServerPlugin {
+impl Plugin for PongServerPlugin {
     fn build(&self, app: &mut App) {
         let server_config = ServerConfig {
             shared: shared_config(),
@@ -89,6 +93,7 @@ impl Plugin for ServerPlugin {
         .init_resource::<ServerState>()
         .init_resource::<GameArea>()
         .add_systems(Startup, (start_server, setup_server))
+        .add_systems(FixedUpdate, handle_actions)
         .add_systems(Update, (handle_connections, handle_disconnections));
     }
 }
@@ -102,6 +107,15 @@ fn setup_server(commands: Commands, game_area: Res<GameArea>) {
     // Spawn borders
     info!("Adding borders");
     spawn_border(commands, game_area);
+}
+
+fn handle_actions(
+    time: Res<Time>,
+    mut query: Query<(&ActionState<Action>, &mut Transform), With<NetworkedPaddle>>,
+) {
+    for (action_state, mut transform) in &mut query {
+        apply_paddle_action(&time, action_state, &mut transform);
+    }
 }
 
 fn spawn_border(mut commands: Commands, game_area: Res<GameArea>) {
@@ -119,6 +133,10 @@ fn spawn_border(mut commands: Commands, game_area: Res<GameArea>) {
         },
         Transform::from_xyz(-half_width, 0., 0.),
         Collider::rectangle(BORDER_THICKNESS, vertical_height),
+        server::Replicate {
+            group: REPLICATION_GROUP,
+            ..default()
+        },
     ));
 
     // Right
@@ -128,15 +146,23 @@ fn spawn_border(mut commands: Commands, game_area: Res<GameArea>) {
         },
         Transform::from_xyz(half_width, 0., 0.),
         Collider::rectangle(BORDER_THICKNESS, vertical_height),
+        server::Replicate {
+            group: REPLICATION_GROUP,
+            ..default()
+        },
     ));
 
     // Top
     commands.spawn((
         Border {
-            side: BorderSide::Left,
+            side: BorderSide::Top,
         },
         Transform::from_xyz(0., half_height, 0.),
         Collider::rectangle(horizontal_width, BORDER_THICKNESS),
+        server::Replicate {
+            group: REPLICATION_GROUP,
+            ..default()
+        },
     ));
 
     // Bottom
@@ -146,6 +172,10 @@ fn spawn_border(mut commands: Commands, game_area: Res<GameArea>) {
         },
         Transform::from_xyz(0., -half_height, 0.),
         Collider::rectangle(horizontal_width, BORDER_THICKNESS),
+        server::Replicate {
+            group: REPLICATION_GROUP,
+            ..default()
+        },
     ));
 }
 
@@ -221,8 +251,8 @@ fn spawn_networked_paddle(
     game_area: &GameArea,
 ) {
     let paddle_x = match side {
-        PaddleSide::Left => -(game_area.width / 2.0) + PADDLE_WIDTH * 2.0,
-        PaddleSide::Right => (game_area.width / 2.0) - PADDLE_HEIGHT * 2.0,
+        PaddleSide::Left => -(game_area.width / 2.0) + PADDLE_HEIGHT,
+        PaddleSide::Right => (game_area.width / 2.0) - PADDLE_HEIGHT,
     };
 
     commands.spawn((
@@ -232,17 +262,22 @@ fn spawn_networked_paddle(
         Collider::rectangle(PADDLE_WIDTH, PADDLE_HEIGHT),
         server::Replicate {
             controlled_by: ControlledBy {
-                lifetime: Lifetime::SessionBased,
                 target: NetworkTarget::Single(client_id),
+                ..default()
             },
-            target: ReplicationTarget {
-                target: NetworkTarget::AllExceptSingle(client_id),
-            },
+            group: REPLICATION_GROUP,
             ..default()
         },
+        ActionState::<Action>::default(),
     ));
 }
 
 fn spawn_networked_ball(commands: &mut Commands) {
-    commands.spawn((NetworkedBall, server::Replicate::default()));
+    commands.spawn((
+        NetworkedBall,
+        server::Replicate {
+            group: REPLICATION_GROUP,
+            ..default()
+        },
+    ));
 }

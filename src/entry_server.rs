@@ -3,8 +3,8 @@
 mod game;
 
 use bevy::prelude::*;
-use game::server::ServerPlugin;
+use game::server::PongServerPlugin;
 
 fn main() -> AppExit {
-    App::new().add_plugins(ServerPlugin::default()).run()
+    App::new().add_plugins(PongServerPlugin::default()).run()
 }
