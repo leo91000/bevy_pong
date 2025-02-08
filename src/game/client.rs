@@ -48,7 +48,7 @@ impl Plugin for PongClientPlugin {
 fn get_client_config() -> client::ClientConfig {
     let netcode_config = client::NetcodeConfig::default();
 
-    let server_addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, 32761).into();
+    let server_addr = SocketAddrV4::new("62.210.173.21".parse().unwrap(), 32761).into();
     let client_addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, random()).into();
 
     let io_config = client::IoConfig::from_transport(client::ClientTransport::WebTransportClient {

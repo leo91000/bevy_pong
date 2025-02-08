@@ -27,21 +27,22 @@ pub struct ServerState {
 
 #[derive(Resource, Copy, Clone)]
 pub struct PongServerConfig {
-    pub port: u16,
+    pub webtransport_port: u16,
+    pub websocket_port: u16,
+    pub udp_port: u16,
 }
 
 impl Default for PongServerConfig {
     fn default() -> Self {
-        Self { port: 32761 }
+        Self {
+            webtransport_port: 32761,
+            websocket_port: 32762,
+            udp_port: 32763,
+        }
     }
 }
 
-#[derive(Default)]
-pub struct PongServerPlugin {
-    pub config: PongServerConfig,
-}
-
-fn webtransport_net_config(port: u16) -> server::NetConfig {
+fn create_webtransport_config(port: u16) -> server::NetConfig {
     let netcode_config = server::NetcodeConfig {
         private_key: server_private_key(),
         protocol_id: PROTOCOL_ID,
@@ -53,7 +54,13 @@ fn webtransport_net_config(port: u16) -> server::NetConfig {
 
     let transport_config = server::ServerTransport::WebTransportServer {
         server_addr,
-        certificate: server::Identity::self_signed(&["localhost", "127.0.0.1", "::1"]).unwrap(),
+        certificate: server::Identity::self_signed(&[
+            "localhost",
+            "127.0.0.1",
+            "::1",
+            "62.210.173.21",
+        ])
+        .unwrap(),
     };
 
     let io_config = server::IoConfig::from_transport(transport_config);
@@ -64,11 +71,58 @@ fn webtransport_net_config(port: u16) -> server::NetConfig {
     }
 }
 
+fn create_websocket_config(port: u16) -> server::NetConfig {
+    let netcode_config = server::NetcodeConfig {
+        private_key: server_private_key(),
+        protocol_id: PROTOCOL_ID,
+        ..default()
+    };
+
+    let ip: IpAddr = Ipv4Addr::UNSPECIFIED.into();
+    let server_addr = SocketAddr::new(ip, port);
+
+    let transport_config = server::ServerTransport::WebSocketServer { server_addr };
+    let io_config = server::IoConfig::from_transport(transport_config);
+
+    server::NetConfig::Netcode {
+        config: netcode_config,
+        io: io_config,
+    }
+}
+
+fn create_udp_config(port: u16) -> server::NetConfig {
+    let netcode_config = server::NetcodeConfig {
+        private_key: server_private_key(),
+        protocol_id: PROTOCOL_ID,
+        ..default()
+    };
+
+    let ip: IpAddr = Ipv4Addr::UNSPECIFIED.into();
+    let server_addr = SocketAddr::new(ip, port);
+
+    let transport_config = server::ServerTransport::UdpSocket(server_addr);
+    let io_config = server::IoConfig::from_transport(transport_config);
+
+    server::NetConfig::Netcode {
+        config: netcode_config,
+        io: io_config,
+    }
+}
+
+#[derive(Default)]
+pub struct PongServerPlugin {
+    pub config: PongServerConfig,
+}
+
 impl Plugin for PongServerPlugin {
     fn build(&self, app: &mut App) {
         let server_config = ServerConfig {
             shared: shared_config(),
-            net: vec![webtransport_net_config(self.config.port)],
+            net: vec![
+                create_webtransport_config(self.config.webtransport_port),
+                create_websocket_config(self.config.websocket_port),
+                create_udp_config(self.config.udp_port),
+            ],
             ..default()
         };
 
@@ -99,7 +153,13 @@ impl Plugin for PongServerPlugin {
 }
 
 fn start_server(mut commands: Commands, server_config: Res<PongServerConfig>) {
-    info!("Server starting at 127.0.0.1:{0}", server_config.port);
+    info!(
+        "Server starting with multiple transports:\n\
+         WebTransport: 127.0.0.1:{}\n\
+         WebSocket: 127.0.0.1:{}\n\
+         UDP: 127.0.0.1:{}",
+        server_config.webtransport_port, server_config.websocket_port, server_config.udp_port
+    );
     commands.start_server();
 }
 
