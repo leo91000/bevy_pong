@@ -26,6 +26,7 @@ impl Plugin for PongClientPlugin {
         app.add_plugins((
             DefaultPlugins,
             client::ClientPlugins::new(get_client_config()),
+            PhysicsPlugins::default(),
             ProtocolPlugin,
         ));
         app.init_resource::<GameArea>();

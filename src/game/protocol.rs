@@ -118,22 +118,22 @@ impl Plugin for ProtocolPlugin {
         //
         // They also set `interpolation_fn` which is used by the VisualInterpolationPlugin to smooth
         // out rendering between fixedupdate ticks.
-        app.register_component::<Position>(ChannelDirection::ServerToClient)
-            .add_prediction(ComponentSyncMode::Full)
-            .add_interpolation_fn(lightyear::utils::avian2d::position::lerp)
-            .add_correction_fn(lightyear::utils::avian2d::position::lerp);
-
-        app.register_component::<Rotation>(ChannelDirection::ServerToClient)
-            .add_prediction(ComponentSyncMode::Full)
-            .add_interpolation_fn(lightyear::utils::avian2d::rotation::lerp)
-            .add_correction_fn(lightyear::utils::avian2d::rotation::lerp);
+        // app.register_component::<Position>(ChannelDirection::ServerToClient)
+        //     .add_prediction(ComponentSyncMode::Full)
+        //     .add_interpolation_fn(lightyear::utils::avian2d::position::lerp)
+        //     .add_correction_fn(lightyear::utils::avian2d::position::lerp);
+        //
+        // app.register_component::<Rotation>(ChannelDirection::ServerToClient)
+        //     .add_prediction(ComponentSyncMode::Full)
+        //     .add_interpolation_fn(lightyear::utils::avian2d::rotation::lerp)
+        //     .add_correction_fn(lightyear::utils::avian2d::rotation::lerp);
 
         // do not replicate Transform but make sure to register an interpolation function
         // for it so that we can do visual interpolation
         // (another option would be to replicate transform and not use Position/Rotation at all)
-        app.add_interpolation::<Transform>(ComponentSyncMode::None);
-        app.add_interpolation_fn::<Transform>(
-            <TransformLinearInterpolation as LerpFn<Transform>>::lerp,
-        );
+        app.register_component::<Transform>(ChannelDirection::ServerToClient)
+            .add_prediction(ComponentSyncMode::Full)
+            .add_interpolation_fn(<TransformLinearInterpolation as LerpFn<Transform>>::lerp)
+            .add_correction_fn(<TransformLinearInterpolation as LerpFn<Transform>>::lerp);
     }
 }
