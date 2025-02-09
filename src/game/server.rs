@@ -3,8 +3,8 @@ use crate::game::protocol::{
 };
 use crate::game::shared::{apply_paddle_action, Border, BorderSide, GameArea};
 use crate::game::shared_const::{
-    server_private_key, shared_config, BORDER_THICKNESS, PADDLE_HEIGHT, PADDLE_WIDTH, PROTOCOL_ID,
-    REPLICATION_GROUP,
+    get_server_ip_addr, get_server_port, server_private_key, shared_config, BORDER_THICKNESS,
+    PADDLE_HEIGHT, PADDLE_WIDTH, PROTOCOL_ID, REPLICATION_GROUP,
 };
 use avian2d::prelude::*;
 use bevy::log::{Level, LogPlugin};
@@ -35,7 +35,7 @@ pub struct PongServerConfig {
 impl Default for PongServerConfig {
     fn default() -> Self {
         Self {
-            webtransport_port: 32761,
+            webtransport_port: get_server_port(),
             websocket_port: 32762,
             udp_port: 32763,
         }
@@ -49,16 +49,16 @@ fn create_webtransport_config(port: u16) -> server::NetConfig {
         ..default()
     };
 
-    let ip: IpAddr = Ipv4Addr::UNSPECIFIED.into();
-    let server_addr = SocketAddr::new(ip, port);
+    let server_ip_addr = get_server_ip_addr();
+    let server_addr = SocketAddr::new(server_ip_addr.into(), port);
 
     let transport_config = server::ServerTransport::WebTransportServer {
         server_addr,
-        certificate: server::Identity::self_signed(&[
+        certificate: server::Identity::self_signed([
             "localhost",
             "127.0.0.1",
             "::1",
-            "62.210.173.21",
+            &server_ip_addr.to_string(),
         ])
         .unwrap(),
     };

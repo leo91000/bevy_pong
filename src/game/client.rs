@@ -1,8 +1,8 @@
 use crate::game::protocol::{Action, NetworkedBall, NetworkedPaddle, ProtocolPlugin};
 use crate::game::shared::{apply_paddle_action, Border, BorderSide, GameArea};
 use crate::game::shared_const::{
-    server_private_key, shared_config, BALL_RADIUS, BORDER_THICKNESS, PADDLE_HEIGHT, PADDLE_WIDTH,
-    PROTOCOL_ID,
+    get_server_socket_addr, server_private_key, shared_config, BALL_RADIUS, BORDER_THICKNESS,
+    PADDLE_HEIGHT, PADDLE_WIDTH, PROTOCOL_ID,
 };
 use avian2d::prelude::*;
 use bevy::ecs::component::{ComponentId, ComponentInfo};
@@ -33,14 +33,7 @@ impl Plugin for PongClientPlugin {
         app.add_systems(FixedUpdate, handle_actions);
         app.add_systems(
             Update,
-            (
-                handle_new_border,
-                handle_new_ball,
-                handle_new_paddle,
-                // debug_marker::<&NetworkedPaddle>("Paddle"),
-                // debug_marker::<&NetworkedBall>("Ball"),
-                // debug_marker::<&Border>("Border"),
-            ),
+            (handle_new_border, handle_new_ball, handle_new_paddle),
         );
     }
 }
@@ -48,12 +41,12 @@ impl Plugin for PongClientPlugin {
 fn get_client_config() -> client::ClientConfig {
     let netcode_config = client::NetcodeConfig::default();
 
-    let server_addr = SocketAddrV4::new("62.210.173.21".parse().unwrap(), 32761).into();
-    let client_addr = SocketAddrV4::new(Ipv4Addr::LOCALHOST, random()).into();
+    let server_addr = get_server_socket_addr();
+    let client_addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 0).into();
 
     let io_config = client::IoConfig::from_transport(client::ClientTransport::WebTransportClient {
-        server_addr,
         client_addr,
+        server_addr,
     });
     let auth = client::Authentication::Manual {
         private_key: server_private_key(),

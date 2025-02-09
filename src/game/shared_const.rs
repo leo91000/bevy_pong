@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use lightyear::prelude::*;
+use std::convert::Into;
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::time::Duration;
 
 pub fn server_private_key() -> Key {
@@ -32,3 +34,19 @@ pub const BALL_RADIUS: f32 = 10.;
 pub const PROTOCOL_ID: u64 = 0;
 
 pub const REPLICATION_GROUP: ReplicationGroup = ReplicationGroup::new_id(1);
+
+pub fn get_server_socket_addr() -> SocketAddr {
+    SocketAddrV4::new(get_server_ip_addr(), get_server_port()).into()
+}
+
+pub fn get_server_port() -> u16 {
+    option_env!("PONG_SERVER_PORT")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(32761)
+}
+
+pub fn get_server_ip_addr() -> Ipv4Addr {
+    option_env!("PONG_SERVER_HOST")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(Ipv4Addr::UNSPECIFIED)
+}
