@@ -3,8 +3,8 @@ use crate::game::protocol::{
 };
 use crate::game::shared::{apply_paddle_action, Border, BorderSide, GameArea};
 use crate::game::shared_const::{
-    get_server_ip_addr, get_server_port, server_private_key, shared_config, BORDER_THICKNESS,
-    PADDLE_HEIGHT, PADDLE_WIDTH, PROTOCOL_ID, REPLICATION_GROUP,
+    get_server_ip_addr, get_server_port, shared_config, BORDER_THICKNESS, PADDLE_HEIGHT,
+    PADDLE_WIDTH, PROTOCOL_ID, REPLICATION_GROUP, SERVER_PRIVATE_KEY,
 };
 use avian2d::prelude::*;
 use bevy::log::{Level, LogPlugin};
@@ -44,7 +44,7 @@ impl Default for PongServerConfig {
 
 fn create_webtransport_config(port: u16) -> server::NetConfig {
     let netcode_config = server::NetcodeConfig {
-        private_key: server_private_key(),
+        private_key: SERVER_PRIVATE_KEY,
         protocol_id: PROTOCOL_ID,
         ..default()
     };
@@ -73,7 +73,7 @@ fn create_webtransport_config(port: u16) -> server::NetConfig {
 
 fn create_websocket_config(port: u16) -> server::NetConfig {
     let netcode_config = server::NetcodeConfig {
-        private_key: server_private_key(),
+        private_key: SERVER_PRIVATE_KEY,
         protocol_id: PROTOCOL_ID,
         ..default()
     };
@@ -92,7 +92,7 @@ fn create_websocket_config(port: u16) -> server::NetConfig {
 
 fn create_udp_config(port: u16) -> server::NetConfig {
     let netcode_config = server::NetcodeConfig {
-        private_key: server_private_key(),
+        private_key: SERVER_PRIVATE_KEY,
         protocol_id: PROTOCOL_ID,
         ..default()
     };

@@ -1,8 +1,8 @@
 use crate::game::protocol::{Action, NetworkedBall, NetworkedPaddle, ProtocolPlugin};
 use crate::game::shared::{apply_paddle_action, Border, BorderSide, GameArea};
 use crate::game::shared_const::{
-    get_server_socket_addr, server_private_key, shared_config, BALL_RADIUS, BORDER_THICKNESS,
-    PADDLE_HEIGHT, PADDLE_WIDTH, PROTOCOL_ID,
+    get_server_socket_addr, shared_config, BALL_RADIUS, BORDER_THICKNESS, PADDLE_HEIGHT,
+    PADDLE_WIDTH, PROTOCOL_ID, SERVER_PRIVATE_KEY,
 };
 use avian2d::prelude::*;
 use bevy::ecs::component::{ComponentId, ComponentInfo};
@@ -50,7 +50,7 @@ fn get_client_config() -> client::ClientConfig {
         server_addr,
     });
     let auth = client::Authentication::Manual {
-        private_key: server_private_key(),
+        private_key: SERVER_PRIVATE_KEY,
         server_addr,
         client_id: random(),
         protocol_id: PROTOCOL_ID,
@@ -74,15 +74,23 @@ fn connect_to_server(mut commands: Commands) {
 }
 
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn(Camera2d::default());
+    commands.spawn(Camera2d);
 }
+
+type InputActionQuery<'w, 's, 'a, 'b, 'c> = Query<
+    'w,
+    's,
+    (
+        &'a ActionState<Action>,
+        &'b InputBuffer<Action>,
+        &'c mut Transform,
+    ),
+    (Added<Predicted>, With<NetworkedPaddle>),
+>;
 
 fn handle_actions(
     time: Res<Time>,
-    mut query: Query<
-        (&ActionState<Action>, &InputBuffer<Action>, &mut Transform),
-        (Added<Predicted>, With<NetworkedPaddle>),
-    >,
+    mut query: InputActionQuery,
     tick_manager: Res<TickManager>,
     rollback: Option<Res<Rollback>>,
 ) {
@@ -105,10 +113,10 @@ fn handle_actions(
     }
 }
 
-fn handle_new_paddle(
-    mut commands: Commands,
-    mut query: Query<(Entity, Has<Controlled>), (Added<InitialReplicated>, With<NetworkedPaddle>)>,
-) {
+type PaddleQuery<'w, 's> =
+    Query<'w, 's, (Entity, Has<Controlled>), (Added<InitialReplicated>, With<NetworkedPaddle>)>;
+
+fn handle_new_paddle(mut commands: Commands, mut query: PaddleQuery) {
     for (entity, is_controlled) in &mut query {
         if is_controlled {
             info!("Adding InputMap to controlled and preducted entity {entity:?}");
@@ -133,10 +141,7 @@ fn handle_new_paddle(
 }
 
 #[allow(unused)]
-pub fn all_component_ids<'a>(
-    world: &'a World,
-    entity: Entity,
-) -> impl Iterator<Item = ComponentId> + 'a {
+pub fn all_component_ids(world: &World, entity: Entity) -> impl Iterator<Item = ComponentId> + '_ {
     for archetype in world.archetypes().iter() {
         if archetype.entities().iter().any(|e| e.id() == entity) {
             return archetype.components();
@@ -146,10 +151,10 @@ pub fn all_component_ids<'a>(
 }
 
 #[allow(unused)]
-pub fn all_component_infos<'a>(
-    world: &'a World,
+pub fn all_component_infos(
+    world: &World,
     entity: Entity,
-) -> impl Iterator<Item = &'a ComponentInfo> + 'a {
+) -> impl Iterator<Item = &ComponentInfo> + '_ {
     let components = world.components();
     all_component_ids(world, entity).map(|id| {
         components
